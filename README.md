@@ -1,1 +1,5 @@
-# Resnet_cuDNN
+#
+# Convolution
+# pooling
+# activation
+# Batch Normalization
