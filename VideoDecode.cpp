@@ -1,4 +1,5 @@
-//#include "stdafx.h"
+#include "stdafx.h"
+
 #include "VideoDecode.h"
 
 //void ConvertToPlanar(uint8_t *pHostFrame, int nWidth, int nHeight, int nBitDepth) {
@@ -45,21 +46,6 @@ static unsigned long GetNumDecodeSurfaces(cudaVideoCodec eCodec, unsigned int nW
 int VideoDecode::HandleVideoFormat(CUVIDEOFORMAT * pVideo)
 {
 	int nDecodeSurface = GetNumDecodeSurfaces(pVideo->codec, pVideo->coded_width, pVideo->coded_height);
-	//CUVIDDECODECAPS cuCaps;
-	//memset(&cuCaps, 0, sizeof(CUVIDDECODECAPS));
-	//cuCaps.eChromaFormat = pVideo->chroma_format;
-	//cuCaps.eCodecType = pVideo->codec;
-	//cuCaps.nBitDepthMinus8 = pVideo->bit_depth_chroma_minus8;
-	//cuCtxPushCurrent(m_cuContext);
-	//cuvidGetDecoderCaps(&cuCaps);
-	//cuCtxPushCurrent(NULL);
-	////check video 
-	//if (!cuCaps.bIsSupported)
-	//{
-	//	std::cout << "CUVID not support" << std::endl;
-	//	return -1;
-	//}
-	//create decode video
 	CUVIDDECODECREATEINFO stDecodeInfo = { 0 };
 	stDecodeInfo.bitDepthMinus8 = pVideo->bit_depth_chroma_minus8;
 	stDecodeInfo.OutputFormat = pVideo->bit_depth_luma_minus8 ? cudaVideoSurfaceFormat_P016 : cudaVideoSurfaceFormat_NV12;
@@ -229,8 +215,6 @@ VideoDecode::~VideoDecode()
 			delete[] pFrame;
 		}
 	}
-	
-
 }
 
 bool VideoDecode::Decode(uint8_t* pData,int size,uint8_t *** p3DFrameOut, int * pnFrameReturn, int64_t ** ppTimeStamp,int nTimeStamp,int nFlags,CUstream vStream)

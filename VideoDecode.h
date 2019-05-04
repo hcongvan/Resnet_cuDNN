@@ -1,7 +1,6 @@
 #ifndef __video_decode_h__
 #define __video_decode_h__
-#include "NvDecoder/nvcuvid.h"
-#include "NvDecoder/cuviddec.h"
+#include "NvDecoder\nvcuvid.h"
 #include <iostream>
 #include <vector>
 #include <algorithm>

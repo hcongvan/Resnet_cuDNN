@@ -6,113 +6,26 @@
 #include <algorithm>
 #include <stdint.h>
 #include <sstream>
-#include "Utils/NvCodecUtils.h"
-#include "Utils/FFmpegDemuxer.h"
+#include "stdafx.h"
+#include "Utils\NvCodecUtils.h"
+#include "Utils\FFmpegDemuxer.h"
 #include "VideoDecode.h"
 #include "cuda.h"
 #include "cudnn.h"
-#include "NvDecoder/nvcuvid.h"
-#include "NvDecoder/cuviddec.h"
-//#include "dynlink_cuda.h"
+#include "NvDecoder\nvcuvid.h"
+#include "NvDecoder\cuviddec.h"
+#include "dynlink_cuda.h"
 #include <ctime>
 
 #define TESTPLANAR false
 #define ASSERT(x) 
 #define PATH 'e:\\Youtube\\sample_per_title\\presentation.mp4'
+
+
+
 simplelogger::Logger *logger = simplelogger::LoggerFactory::CreateConsoleLogger();
 
 std::ofstream fpOut("e:\\Youtube\\sample_per_title\\presentation_2.yuv", std::ios::out | std::ios::binary);
-
-void ShowHelpAndExit(const char *szBadOption = NULL)
-{
-	bool bThrowError = false;
-	std::ostringstream oss;
-	if (szBadOption)
-	{
-		bThrowError = true;
-		oss << "Error parsing \"" << szBadOption << "\"" << std::endl;
-	}
-	oss << "Options:" << std::endl
-		<< "-i             Input file path" << std::endl
-		<< "-o             Output file path" << std::endl
-		<< "-outplanar     Convert output to planar format" << std::endl
-		<< "-gpu           Ordinal of GPU to use" << std::endl
-		<< "-crop l,t,r,b  Crop rectangle in left,top,right,bottom (ignored for case 0)" << std::endl
-		<< "-resize WxH    Resize to dimension W times H (ignored for case 0)" << std::endl
-		;
-	oss << std::endl;
-	if (bThrowError)
-	{
-		throw std::invalid_argument(oss.str());
-	}
-	else
-	{
-		std::cout << oss.str();
-		//ShowDecoderCapability();
-		exit(0);
-	}
-}
-
-void ParseCommandLine(int argc, char *argv[], char *szInputFileName, char *szOutputFileName,
-	bool &bOutPlanar, int &iGpu, Rect_t &cropRect, Mat_t &resizeDim)
-{
-	std::ostringstream oss;
-	int i;
-	for (i = 1; i < argc; i++) {
-		if (!_stricmp(argv[i], "-h")) {
-			ShowHelpAndExit();
-		}
-		if (!_stricmp(argv[i], "-i")) {
-			if (++i == argc) {
-				ShowHelpAndExit("-i");
-			}
-			sprintf(szInputFileName, "%s", argv[i]);
-			continue;
-		}
-		if (!_stricmp(argv[i], "-o")) {
-			if (++i == argc) {
-				ShowHelpAndExit("-o");
-			}
-			sprintf(szOutputFileName, "%s", argv[i]);
-			continue;
-		}
-		if (!_stricmp(argv[i], "-outplanar")) {
-			bOutPlanar = true;
-			continue;
-		}
-		if (!_stricmp(argv[i], "-gpu")) {
-			if (++i == argc) {
-				ShowHelpAndExit("-gpu");
-			}
-			iGpu = atoi(argv[i]);
-			continue;
-		}
-		if (!_stricmp(argv[i], "-crop")) {
-			if (++i == argc || 4 != sscanf(
-				argv[i], "%d,%d,%d,%d",
-				&cropRect.l, &cropRect.t, &cropRect.r, &cropRect.b)) {
-				ShowHelpAndExit("-crop");
-			}
-			if ((cropRect.r - cropRect.l) % 2 == 1 || (cropRect.b - cropRect.t) % 2 == 1) {
-				std::cout << "Cropping rect must have width and height of even numbers" << std::endl;
-				exit(1);
-			}
-			continue;
-		}
-		if (!_stricmp(argv[i], "-resize")) {
-			if (++i == argc || 2 != sscanf(argv[i], "%dx%d", &resizeDim.w, &resizeDim.h)) {
-				ShowHelpAndExit("-resize");
-			}
-			if (resizeDim.w % 2 == 1 || resizeDim.h % 2 == 1) {
-				std::cout << "Resizing rect must have width and height of even numbers" << std::endl;
-				exit(1);
-			}
-			continue;
-		}
-		ShowHelpAndExit(argv[i]);
-	}
-}
-
 
 int main()
 {
@@ -162,6 +75,7 @@ int main()
 	duration = (std::clock() - mTimer) / CLOCKS_PER_SEC;
 	std::cout << "Time to complete: " << duration << std::endl;
 	
+
 
 	return 0;
 }
