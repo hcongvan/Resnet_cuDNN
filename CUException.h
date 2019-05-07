@@ -2,6 +2,8 @@
 #include <iostream>
 #include <sstream>
 #include "stdafx.h"
+#include "cuda.h"
+#include "cudnn.h"
 
 class CUDAException : public std::exception
 {

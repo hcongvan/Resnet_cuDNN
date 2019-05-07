@@ -5,9 +5,9 @@ VisualStudioVersion = 15.0.26730.16
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Resnet", "Resnet.vcxproj", "{7FE0D4C8-8178-4937-9924-707C32D49DFA}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "openCVRead", "..\openCVRead\openCVRead.vcxproj", "{0F73D557-B0B8-4EC2-A3CA-A5BC9F4A61D8}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "openCVRead", "openCVRead.vcxproj", "{0F73D557-B0B8-4EC2-A3CA-A5BC9F4A61D8}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Cudnn_Test", "..\Cudnn_Test\Cudnn_Test.vcxproj", "{3C8407DE-DCBD-4F2E-8A85-59B32BB84611}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Cudnn_Test", "Cudnn_Test.vcxproj", "{3C8407DE-DCBD-4F2E-8A85-59B32BB84611}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
