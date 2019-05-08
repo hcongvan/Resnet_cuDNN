@@ -22,7 +22,12 @@ typedef struct {
 	uint8_t layer_pos;
 	enum layer_type _layer;
 }layer_t;
-
+typedef struct {
+	cudnnConvolutionFwdAlgo_t algo;
+	size_t workspace;
+	cudnnConvolutionDescriptor_t descriptor;
+	cudnnFilterDescriptor_t kernel;
+}conv_t;
 typedef struct Matix {
 	int n, c, h, w;
 	void * data;
@@ -31,7 +36,7 @@ typedef enum {
 	CONVOLUTION_SAME,
 	CONVOLUTION_VAILD
 }convType;
-std::vector<cudnnConvolutionDescriptor_t> _conv;
+std::vector<conv_t> _conv;
 std::vector<cudnnFilterDescriptor_t> _filter;
 std::vector<cudnnTensorDescriptor_t> _mat;
 std::vector<cudnnActivationDescriptor_t> _activation;
@@ -46,16 +51,21 @@ cudnnTensorFormat_t format; //init
 cudnnDataType_t dataType; //init
 
 
-bool ForwardConvNd(matrix_t in, layer_t pos)
+bool ForwardConvNd(matrix_t in,cudnnHandle_t handle, layer_t pos)
 {
+	
+
+
+	float alph = 1.0, beta = 0;
+	cudnnConvolutionForward(cudnnHandle, &alph, input, _input, f1, _f1, c1, algo, _workSpace, workspaceSize, &beta, output, _output);
 	return true;
 }
-bool InitConvNd(matrix_t in, convType type,const int convNd,int stride ,int kernelSize, int channel_out,layer_t pos)
+bool InitConvNd(matrix_t in,cudnnHandle_t handle, convType type,const int convNd,int stride ,int kernelSize, int channel_out,layer_t pos)
 {
 	int *_pad, *_stride, *_dilation;
 	_pad = _stride = _dilation = (int *)malloc(convNd * sizeof(int));
 	int _out[4];
-	CUDNN_API_CALL( cudnnCreateConvolutionDescriptor(&_conv[pos.layer_pos]));
+	CUDNN_API_CALL( cudnnCreateConvolutionDescriptor(&_conv[pos.layer_pos].descriptor));
 	CUDNN_API_CALL( cudnnCreateFilterDescriptor(&_filter[pos.layer_pos]));
 	//CUDNN_API_CALL( cudnnCreateTensorDescriptor(&_mat[pos]));
 	CUDNN_API_CALL( cudnnCreateTensorDescriptor(&_mat[pos.out_pos]));
@@ -90,7 +100,9 @@ bool InitConvNd(matrix_t in, convType type,const int convNd,int stride ,int kern
 		return false;
 	}
 	CUDNN_API_CALL( cudnnSetTensor4dDescriptor(_mat[pos.out_pos], format, dataType, _out[0], _out[1], _out[2], _out[3]));
-	
+	CUDNN_API_CALL(cudnnGetConvolutionForwardAlgorithm(handle, _mat[pos.in_pos], _filter[pos.layer_pos],
+		_conv[pos.layer_pos], _mat[pos.out_pos], CUDNN_CONVOLUTION_FWD_PREFER_FASTEST, 0, &algo));
+	cudnnGetConvolutionForwardWorkspaceSize(cudnnHandle, input, f1, c1, output, algo, &workspaceSize);
 	return true;
 }
 bool InitPoolingNd(matrix_t in,int poolNd ,int stride,int poolsize, layer_t pos)
@@ -122,7 +134,7 @@ bool InitDropout(matrix_t in, cudnnHandle_t handle, float dropout, matrix_t out,
 
 void Forward(std::vector<layer_type> layer)
 {
-
+	
 }
 cv::Mat load_image(const char* image_path) {
 	cv::Mat image = cv::imread(image_path, CV_LOAD_IMAGE_COLOR);
