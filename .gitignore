@@ -260,3 +260,4 @@ paket-files/
 __pycache__/
 *.pyc
 /Youtubesample_per_titlepresentation_1.yuv
+/opencv_world346d.dll

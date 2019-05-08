@@ -5,14 +5,24 @@
 #include <vector>
 #include "CUException.h"
 #include <opencv2/opencv.hpp>
+#include <cublas.h>
 
+enum layer_type {
+	CONVOLUTION = 0,
+	ACTIVATION,
+	POOLING,
+	BATCH_NORMALIZATION,
+	DROPOUT,
+	DENSE
+};
 
-cv::Mat load_image(const char* image_path) {
-	cv::Mat image = cv::imread(image_path, CV_LOAD_IMAGE_COLOR);
-	image.convertTo(image, CV_32FC3);
-	cv::normalize(image, image, 0, 1, cv::NORM_MINMAX);
-	return image;
-}
+typedef struct {
+	uint8_t in_pos;
+	uint8_t out_pos;
+	uint8_t layer_pos;
+	enum layer_type _layer;
+}layer_t;
+
 typedef struct Matix {
 	int n, c, h, w;
 	void * data;
@@ -28,30 +38,19 @@ std::vector<cudnnActivationDescriptor_t> _activation;
 std::vector<cudnnPoolingDescriptor_t> _pooling;
 std::vector<cudnnOpTensorDescriptor_t> _fc;
 std::vector<cudnnDropoutDescriptor_t> _dropout;
-
+std::vector<layer_type> _layer;
 std::vector<matrix_t> m_mat;
 std::vector<matrix_t> m_weight;
 std::vector<matrix_t> m_bias;
 cudnnTensorFormat_t format; //init
 cudnnDataType_t dataType; //init
 
-enum layer_type {
-	CONVOLUTION = 0,
-	ACTIVATION,
-	POOLING,
-	BATCH_NORMALIZATION,
-	DROPOUT,
-	OPERAND
-};
 
-typedef struct {
-	uint8_t in_pos;
-	uint8_t out_pos;
-	uint8_t layer_pos;
-	enum layer_type _layer;
-}layer_t;
-
-bool ConvolutionNd(matrix_t in, convType type,const int convNd,int stride ,int kernelSize, int channel_out,layer_t pos)
+bool ForwardConvNd(matrix_t in, layer_t pos)
+{
+	return true;
+}
+bool InitConvNd(matrix_t in, convType type,const int convNd,int stride ,int kernelSize, int channel_out,layer_t pos)
 {
 	int *_pad, *_stride, *_dilation;
 	_pad = _stride = _dilation = (int *)malloc(convNd * sizeof(int));
@@ -94,7 +93,7 @@ bool ConvolutionNd(matrix_t in, convType type,const int convNd,int stride ,int k
 	
 	return true;
 }
-bool PoolingNd(matrix_t in,int poolNd ,int stride,int poolsize, layer_t pos)
+bool InitPoolingNd(matrix_t in,int poolNd ,int stride,int poolsize, layer_t pos)
 {
 	int *out;
 	out = (int *)malloc((poolNd + 2) * sizeof(int));
@@ -107,10 +106,29 @@ bool PoolingNd(matrix_t in,int poolNd ,int stride,int poolsize, layer_t pos)
 	return true;
 }
 
-bool Activation(matrix_t in, layer_t pos)
+bool InitActFunc(matrix_t in,cudnnActivationMode_t mode, double cofficient,layer_t pos)
 {
-	
+	cudnnCreateActivationDescriptor(&_activation[pos.layer_pos]);
+	cudnnSetActivationDescriptor(_activation[pos.layer_pos], mode, CUDNN_NOT_PROPAGATE_NAN, cofficient);
 	return true;
+}
+bool InitDropout(matrix_t in, cudnnHandle_t handle, float dropout, matrix_t out,int seed, layer_t pos)
+{
+	int size = out.c * out.h * out.w * out.n;
+	cudnnCreateDropoutDescriptor(&_dropout[pos.layer_pos]);
+	cudnnSetDropoutDescriptor(_dropout[pos.layer_pos], handle, dropout, out.data, size, seed);
+	return true;
+}
+
+void Forward(std::vector<layer_type> layer)
+{
+
+}
+cv::Mat load_image(const char* image_path) {
+	cv::Mat image = cv::imread(image_path, CV_LOAD_IMAGE_COLOR);
+	image.convertTo(image, CV_32FC3);
+	cv::normalize(image, image, 0, 1, cv::NORM_MINMAX);
+	return image;
 }
 int main()
 {
