@@ -17,17 +17,25 @@ enum layer_type {
 };
 
 typedef struct {
-	uint8_t in_pos;
-	uint8_t out_pos;
-	uint8_t layer_pos;
+	uint8_t inPos;
+	uint8_t outPos;
+	uint8_t curPos;
 	enum layer_type _layer;
 }layer_t;
 typedef struct {
 	cudnnConvolutionFwdAlgo_t algo;
 	size_t workspace;
-	cudnnConvolutionDescriptor_t descriptor;
+	cudnnConvolutionDescriptor_t handle;
 	cudnnFilterDescriptor_t kernel;
+	cudnnTensorDescriptor_t in;
+	cudnnTensorDescriptor_t out;
 }conv_t;
+typedef struct {
+	cudnnPoolingDescriptor_t handle;
+	cudnnTensorDescriptor_t in;
+	cudnnTensorDescriptor_t out;
+}pooling_t;
+
 typedef struct Matix {
 	int n, c, h, w;
 	void * data;
@@ -60,15 +68,15 @@ bool ForwardConvNd(matrix_t in,cudnnHandle_t handle, layer_t pos)
 	cudnnConvolutionForward(cudnnHandle, &alph, input, _input, f1, _f1, c1, algo, _workSpace, workspaceSize, &beta, output, _output);
 	return true;
 }
-bool InitConvNd(matrix_t in,cudnnHandle_t handle, convType type,const int convNd,int stride ,int kernelSize, int channel_out,layer_t pos)
+bool InitConvNd(matrix_t in,cudnnHandle_t handle, convType type,const int convNd,int stride ,int kernelSize, int channel_out,int pos)
 {
 	int *_pad, *_stride, *_dilation;
 	_pad = _stride = _dilation = (int *)malloc(convNd * sizeof(int));
 	int _out[4];
-	CUDNN_API_CALL( cudnnCreateConvolutionDescriptor(&_conv[pos.layer_pos].descriptor));
-	CUDNN_API_CALL( cudnnCreateFilterDescriptor(&_filter[pos.layer_pos]));
-	//CUDNN_API_CALL( cudnnCreateTensorDescriptor(&_mat[pos]));
-	CUDNN_API_CALL( cudnnCreateTensorDescriptor(&_mat[pos.out_pos]));
+	CUDNN_API_CALL( cudnnCreateConvolutionDescriptor(&_conv[pos].handle));
+	CUDNN_API_CALL( cudnnCreateFilterDescriptor(&_conv[pos].kernel));
+	CUDNN_API_CALL( cudnnCreateTensorDescriptor(&_conv[pos].in));
+	CUDNN_API_CALL( cudnnCreateTensorDescriptor(&_conv[pos].out));
 	
 	if (type == CONVOLUTION_SAME)
 	{
@@ -88,47 +96,49 @@ bool InitConvNd(matrix_t in,cudnnHandle_t handle, convType type,const int convNd
 			_stride[i] = stride;
 		}
 	}
-	CUDNN_API_CALL( cudnnSetConvolutionNdDescriptor(_conv[pos.layer_pos], convNd, _pad, _stride, _dilation, CUDNN_CONVOLUTION, dataType));
+	CUDNN_API_CALL( cudnnSetConvolutionNdDescriptor(_conv[pos].handle, convNd, _pad, _stride,
+		_dilation, CUDNN_CONVOLUTION, dataType));
 	int sizefilter[] = { channel_out,in.c,kernelSize,kernelSize };
-	CUDNN_API_CALL( cudnnSetFilterNdDescriptor(_filter[pos.layer_pos], dataType, format, 4, sizefilter));
+	CUDNN_API_CALL( cudnnSetFilterNdDescriptor(_conv[pos].kernel, dataType, format, 4, sizefilter));
 
 	//CUDNN_API_CALL( cudnnSetTensor4dDescriptor(_mat[pos], format, dataType, in.n, in.c, in.h, in.w));
-	CUDNN_API_CALL( cudnnGetConvolutionNdForwardOutputDim(_conv[pos.layer_pos], _mat[pos.in_pos], _filter[pos.layer_pos], 4,_out));
+	CUDNN_API_CALL( cudnnGetConvolutionNdForwardOutputDim(_conv[pos].handle, _conv[pos].in, _conv[pos].kernel, 4,_out));
 	if (_out[1] != channel_out)
 	{
 		printf("size of output and filter not match");
 		return false;
 	}
-	CUDNN_API_CALL( cudnnSetTensor4dDescriptor(_mat[pos.out_pos], format, dataType, _out[0], _out[1], _out[2], _out[3]));
-	CUDNN_API_CALL(cudnnGetConvolutionForwardAlgorithm(handle, _mat[pos.in_pos], _filter[pos.layer_pos],
-		_conv[pos.layer_pos], _mat[pos.out_pos], CUDNN_CONVOLUTION_FWD_PREFER_FASTEST, 0, &algo));
-	cudnnGetConvolutionForwardWorkspaceSize(cudnnHandle, input, f1, c1, output, algo, &workspaceSize);
+	CUDNN_API_CALL( cudnnSetTensor4dDescriptor(_conv[pos].out, format, dataType, _out[0], _out[1], _out[2], _out[3]));
+	CUDNN_API_CALL(cudnnGetConvolutionForwardAlgorithm(handle, _conv[pos].in, _conv[pos].kernel,
+		_conv[pos].handle, _conv[pos].out, CUDNN_CONVOLUTION_FWD_PREFER_FASTEST, 0, &_conv[pos].algo));
+	CUDNN_API_CALL(cudnnGetConvolutionForwardWorkspaceSize(handle, _conv[pos].in, _conv[pos].kernel,
+		_conv[pos].handle, _conv[pos].out, _conv[pos].algo, &_conv[pos].workspace));
 	return true;
 }
 bool InitPoolingNd(matrix_t in,int poolNd ,int stride,int poolsize, layer_t pos)
 {
 	int *out;
 	out = (int *)malloc((poolNd + 2) * sizeof(int));
-	cudnnCreatePoolingDescriptor(&_pooling[pos.layer_pos]);
+	cudnnCreatePoolingDescriptor(&_pooling[pos]);
 	cudnnCreateTensorDescriptor(&_mat[pos.in_pos]);
 	int window[2] = { 2,2 }, _stride[2] = { 2,2 }, pad[2] = { 0,0 };
-	cudnnSetPoolingNdDescriptor(_pooling[pos.layer_pos], CUDNN_POOLING_MAX, CUDNN_NOT_PROPAGATE_NAN, poolNd, window, pad, _stride);
-	cudnnGetPoolingNdForwardOutputDim(_pooling[pos.layer_pos], _mat[pos.in_pos], poolNd+2, out);
+	cudnnSetPoolingNdDescriptor(_pooling[pos], CUDNN_POOLING_MAX, CUDNN_NOT_PROPAGATE_NAN, poolNd, window, pad, _stride);
+	cudnnGetPoolingNdForwardOutputDim(_pooling[pos], _mat[pos.in_pos], poolNd+2, out);
 	cudnnSetTensor4dDescriptor(_mat[pos.out_pos], format, dataType, out[0], out[1], out[2], out[3]);
 	return true;
 }
 
 bool InitActFunc(matrix_t in,cudnnActivationMode_t mode, double cofficient,layer_t pos)
 {
-	cudnnCreateActivationDescriptor(&_activation[pos.layer_pos]);
-	cudnnSetActivationDescriptor(_activation[pos.layer_pos], mode, CUDNN_NOT_PROPAGATE_NAN, cofficient);
+	cudnnCreateActivationDescriptor(&_activation[pos]);
+	cudnnSetActivationDescriptor(_activation[pos], mode, CUDNN_NOT_PROPAGATE_NAN, cofficient);
 	return true;
 }
 bool InitDropout(matrix_t in, cudnnHandle_t handle, float dropout, matrix_t out,int seed, layer_t pos)
 {
 	int size = out.c * out.h * out.w * out.n;
-	cudnnCreateDropoutDescriptor(&_dropout[pos.layer_pos]);
-	cudnnSetDropoutDescriptor(_dropout[pos.layer_pos], handle, dropout, out.data, size, seed);
+	cudnnCreateDropoutDescriptor(&_dropout[pos]);
+	cudnnSetDropoutDescriptor(_dropout[pos], handle, dropout, out.data, size, seed);
 	return true;
 }
 
